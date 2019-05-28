@@ -1,16 +1,33 @@
-# Arduino NINA-W102 firmware
+# Fork of the Arduino NINA-W102 firmware
+
+This is my fork of the Arduino NINA-W102 firmware. The original repository is located at https://github.com/arduino/nina-fw
+
+This was forked to allow for use of VSPI on the WRover(PSRam enabled boards) based ESP32's, as the pins used by the WRoom based boards are not available on the Wrover based boards.
+
+The pins are assigned as follows:
+
+IO23 - MOSI
+IO19 - MISO
+IO18 - SCLK
+IO05 - CS/SS
+IO33 - Ready 
+
+Tested Libraries:
+
+Adafruit's ESP32SPI for CircuitPython
+MY fork of ESP32SPI for micropython on the OpenMV
 
 This firmware uses [Espressif's IDF](https://github.com/espressif/esp-idf)
 
-## Building
+Building
 
-1. [Download the ESP32 toolchain](http://esp-idf.readthedocs.io/en/v3.1/get-started/index.html#setup-toolchain)
-1. Extract it and add it to your `PATH`: `export PATH=$PATH:<path/to/toolchain>/bin`
-1. Clone **v3.1.3** of the IDF: `git clone --branch v3.1.3 --recursive https://github.com/espressif/esp-idf.git`
-1. Set the `IDF_PATH` environment variable: `export IDF_PATH=<path/to/idf>`
-1. Run `make` to build the firmware (in the directory of this read me)
-1. Load the `Tools -> SerialNINAPassthrough` example sketch on to the board
-1. Use `esptool` to flash the compiled firmware
+Download the ESP32 toolchain
+Extract it and add it to your PATH: export PATH=$PATH:<path/to/toolchain>/bin
+Clone v3.2 of the IDF: git clone --branch v3.2 --recursive https://github.com/espressif/esp-idf.git
+Set the IDF_PATH environment variable: export IDF_PATH=<path/to/idf>
+Run make firmware to build the firmware (in the directory of this read me)
+You should have a file named NINA_W102-x.x.x.bin in the top directory
+Use appropriate tools (esptool.py, appropriate pass-through firmware etc) to load this binary file onto your board. make flash also works
 
 ## License
 
