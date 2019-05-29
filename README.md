@@ -4,22 +4,22 @@ This is my fork of the Arduino NINA-W102 firmware. The original repository is lo
 
 This was forked to allow for use of VSPI on the WRover(PSRam enabled boards) based ESP32's, as the pins used by the WRoom based boards are not available on the Wrover based boards.
 
-The pins are assigned as follows:
+#### The pins are assigned as follows:
 
-IO23 - MOSI
-IO19 - MISO
-IO18 - SCLK
-IO05 - CS/SS
-IO33 - Ready 
+1. IO23 - MOSI
+2. IO19 - MISO
+3. IO18 - SCLK
+4. IO05 - CS/SS
+5. IO33 - Ready 
 
-Tested Libraries:
+#### Tested Libraries:
 
 Adafruit's ESP32SPI for CircuitPython
 MY fork of ESP32SPI for micropython on the OpenMV
 
 This firmware uses [Espressif's IDF](https://github.com/espressif/esp-idf)
 
-Building
+## Building
 
 Download the ESP32 toolchain
 Extract it and add it to your PATH: export PATH=$PATH:<path/to/toolchain>/bin
