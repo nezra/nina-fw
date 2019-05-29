@@ -1,4 +1,4 @@
-# Fork of the Arduino NINA-W102 firmware
+# Wrover-B Fork of the Arduino NINA-W102 firmware
 
 This is my fork of the Arduino NINA-W102 firmware. The original repository is located at https://github.com/arduino/nina-fw
 
