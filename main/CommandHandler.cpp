@@ -17,17 +17,19 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <lwip/sockets.h>
-
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiServer.h>
 #include <WiFiSSLClient.h>
 #include <WiFiUdp.h>
+#include "esp_wpa2.h"
+
+#include "driver/adc.h"
+#include "driver/i2c.h"
 
 #include "CommandHandler.h"
 
-const char FIRMWARE_VERSION[6] = "1.2.3";
+const char FIRMWARE_VERSION[6] = "1.3.1";
 
 /*IPAddress*/uint32_t resolvedHostname;
 
@@ -237,17 +239,6 @@ int getTemperature(const uint8_t command[], uint8_t response[])
   memcpy(&response[4], &temperature, sizeof(temperature));
 
   return 9;
-}
-
-int getReasonCode(const uint8_t command[], uint8_t response[])
-{
-  uint8_t reasonCode = WiFi.reasonCode();
-
-  response[2] = 1; // number of parameters
-  response[3] = 1; // parameter 1 length
-  response[4] = reasonCode;
-
-  return 6;
 }
 
 int getConnStatus(const uint8_t command[], uint8_t response[])
@@ -989,6 +980,107 @@ int setAnalogWrite(const uint8_t command[], uint8_t response[])
   return 6;
 }
 
+int wpa2EntSetIdentity(const uint8_t command[], uint8_t response[]) {
+  char identity[32 + 1];
+
+  memset(identity, 0x00, sizeof(identity));
+  memcpy(identity, &command[4], command[3]);
+
+  esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)identity, strlen(identity));
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
+
+  return 6;
+}
+
+int wpa2EntSetUsername(const uint8_t command[], uint8_t response[]) {
+  char username[32 + 1];
+
+  memset(username, 0x00, sizeof(username));
+  memcpy(username, &command[4], command[3]);
+
+  esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username, strlen(username));
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
+
+  return 6;
+}
+
+int wpa2EntSetPassword(const uint8_t command[], uint8_t response[]) {
+  char password[32 + 1];
+
+  memset(password, 0x00, sizeof(password));
+  memcpy(password, &command[4], command[3]);
+
+  esp_wifi_sta_wpa2_ent_set_password((uint8_t *)password, strlen(password));
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
+
+  return 6;
+}
+
+int wpa2EntSetCACert(const uint8_t command[], uint8_t response[]) {
+  // not yet implemented (need to decide if writing in the filesystem is better than loading every time)
+  // keep in mind size limit for messages
+  return 0;
+}
+
+int wpa2EntSetCertKey(const uint8_t command[], uint8_t response[]) {
+  // not yet implemented (need to decide if writing in the filesystem is better than loading every time)
+  // keep in mind size limit for messages
+  return 0;
+}
+
+int wpa2EntEnable(const uint8_t command[], uint8_t response[]) {
+
+  esp_wpa2_config_t config = WPA2_CONFIG_INIT_DEFAULT();
+  esp_wifi_sta_wpa2_ent_enable(&config);
+
+  response[2] = 1; // number of parameters
+  response[3] = 1; // parameter 1 length
+  response[4] = 1;
+
+  return 6;
+}
+
+int getBattery(const uint8_t command[], uint8_t response[])
+{
+  uint16_t result = 255;
+
+  //huzzah32 battery is pin 35; adc1 channel 7
+
+  adc1_config_width(ADC_WIDTH_BIT_12);
+  adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
+  result=adc1_get_raw(ADC1_CHANNEL_7);
+
+  response[2] = 1; // number of parameters
+  response[3] = sizeof(result); // parameter 1 length
+  memcpy(&response[4], &result, sizeof(result));
+
+  return 7;
+
+}
+
+int getDigitalRead(const uint8_t command[], uint8_t response[])
+{
+  uint8_t pin = command[4];
+  uint8_t value = 255;
+  //pinMode(pin, INPUT) needs to get 
+
+  digitalRead(pin);
+
+  response[2] = 1; // number of parameters
+  response[3] = sizeof(value); // parameter 1 length
+  response[4] = value;
+
+  return 6;
+}
 
 typedef int (*CommandHandlerType)(const uint8_t command[], uint8_t response[]);
 
@@ -997,7 +1089,7 @@ const CommandHandlerType commandHandlers[] = {
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 
   // 0x10 -> 0x1f
-  setNet, setPassPhrase, setKey, NULL, setIPconfig, setDNSconfig, setHostname, setPowerMode, setApNet, setApPassPhrase, setDebug, getTemperature, NULL, NULL, NULL, getReasonCode,
+  setNet, setPassPhrase, setKey, NULL, setIPconfig, setDNSconfig, setHostname, setPowerMode, setApNet, setApPassPhrase, setDebug, getTemperature, NULL, NULL, NULL, NULL,
 
   // 0x20 -> 0x2f
   getConnStatus, getIPaddr, getMACaddr, getCurrSSID, getCurrBSSID, getCurrRSSI, getCurrEnct, scanNetworks, startServerTcp, getStateTcp, dataSentTcp, availDataTcp, getDataTcp, startClientTcp, stopClientTcp, getClientStateTcp,
@@ -1006,10 +1098,10 @@ const CommandHandlerType commandHandlers[] = {
   disconnect, NULL, getIdxRSSI, getIdxEnct, reqHostByName, getHostByName, startScanNetworks, getFwVersion, NULL, sendUDPdata, getRemoteData, getTime, getIdxBSSID, getIdxChannel, ping, getSocket,
 
   // 0x40 -> 0x4f
-  NULL, NULL, NULL, NULL, sendDataTcp, getDataBufTcp, insertDataBuf, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, sendDataTcp, getDataBufTcp, insertDataBuf, NULL, NULL, NULL, wpa2EntSetIdentity, wpa2EntSetUsername, wpa2EntSetPassword, wpa2EntSetCACert, wpa2EntSetCertKey, wpa2EntEnable,
 
   // 0x50 -> 0x5f
-  setPinMode, setDigitalWrite, setAnalogWrite,
+  setPinMode, setDigitalWrite, setAnalogWrite, getBattery, getDigitalRead,
 };
 
 #define NUM_COMMAND_HANDLERS (sizeof(commandHandlers) / sizeof(commandHandlers[0]))
@@ -1029,7 +1121,6 @@ void CommandHandlerClass::begin()
   _updateGpio0PinSemaphore = xSemaphoreCreateCounting(2, 0);
 
   WiFi.onReceive(CommandHandlerClass::onWiFiReceive);
-  WiFi.onDisconnect(CommandHandlerClass::onWiFiDisconnect);
 
   xTaskCreatePinnedToCore(CommandHandlerClass::gpio0Updater, "gpio0Updater", 8192, NULL, 1, NULL, 1);
 }
@@ -1115,32 +1206,6 @@ void CommandHandlerClass::onWiFiReceive()
 void CommandHandlerClass::handleWiFiReceive()
 {
   xSemaphoreGiveFromISR(_updateGpio0PinSemaphore, NULL);
-}
-
-void CommandHandlerClass::onWiFiDisconnect()
-{
-  CommandHandler.handleWiFiDisconnect();
-}
-
-void CommandHandlerClass::handleWiFiDisconnect()
-{
-  // workaround to stop lwip_connect hanging
-  // close all non-listening sockets
-
-  for (int i = 0; i < CONFIG_LWIP_MAX_SOCKETS; i++) {
-    struct sockaddr_in addr; 
-    size_t addrLen = sizeof(addr);
-    int socket = LWIP_SOCKET_OFFSET + i;
-
-    if (lwip_getsockname(socket, (sockaddr*)&addr, &addrLen) < 0) {
-      continue;
-    }
-
-    if (addr.sin_addr.s_addr != 0) {
-      // non-listening socket, close
-      close(socket);
-    }
-  }
 }
 
 CommandHandlerClass CommandHandler;
